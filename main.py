@@ -1,3 +1,4 @@
+import argparse
 import yaml
 from reportlab.platypus import (
     BaseDocTemplate,
@@ -35,12 +36,41 @@ def _format_currency(value):
     thousands = thousands.replace(",", ".")
     return f"$ {thousands},{decimals}"
 
+def process_info(data):
+    incomes = data["ingresos"]
+    excluded_income_names = set(data.get("ingresos_no_deducibles", []))
+    deductible_income_total = sum(
+        value for name, value in incomes.items()
+        if name not in excluded_income_names
+    )
+    discount_percentages = data["descuentos"]
+    discount_entries = []
+    for name, percentage in discount_percentages.items():
+        raw_amount = deductible_income_total * percentage / 100 if deductible_income_total else 0.0
+        amount = round(raw_amount)
+        discount_entries.append((name, amount))
+    total_inc = sum(incomes.values())
+    total_disc = sum(amount for _, amount in discount_entries)
+    net_pay = total_inc - total_disc
+    return {
+        "incomes": incomes,
+        "discount_entries": discount_entries,
+        "total_inc": total_inc,
+        "total_disc": total_disc,
+        "net_pay": net_pay,
+        "transport": data.get("transporte", 0)
+    }
+
 
 def _receipt_block(styles, label, data, available_width):
+
     elements = []
-    total_inc = sum(data["ingresos"].values())
-    total_disc = sum(data["descuentos"].values())
-    net_pay = total_inc - total_disc
+    info = process_info(data)
+    incomes = info["incomes"]
+    discount_entries = info["discount_entries"]
+    total_inc = info["total_inc"]
+    total_disc = info["total_disc"]
+    net_pay = info["net_pay"]
 
     employer_info = (
         f"<b>{data['empleador']}</b><br/>"
@@ -125,8 +155,8 @@ def _receipt_block(styles, label, data, available_width):
     def _filter_zeros(concepts):
         return [(name, value) for name, value in concepts.items() if round(value, 2) != 0]
 
-    income_list = _filter_zeros(data["ingresos"])
-    discounts_list = _filter_zeros(data["descuentos"])
+    income_list = _filter_zeros(incomes)
+    discounts_list = [(label, value) for label, value in discount_entries if round(value, 2) != 0]
 
     detail = [[
         Paragraph("CONCEPTOS", styles["SmallBold"]),
@@ -307,9 +337,21 @@ def generate_uruguay_receipt_one_page(pdf_file, data):
 
     doc.build(elements)
 
+def _parse_cli_args():
+    parser = argparse.ArgumentParser(description="Generate a payroll receipt for a given month")
+    parser.add_argument("month", help="Payroll month in YYYY-MM format (matches config/<month>.yaml)")
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    month = "2026-01"
+    args = _parse_cli_args()
+    month = args.month
     with open(f"config/{month}.yaml", "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
     generate_uruguay_receipt_one_page(f"receipts/{month}.pdf", data)
+    print(f"Generated receipt for {month} at receipts/{month}.pdf")
+    info = process_info(data)
+    print("Net salary: " + _format_currency(info["net_pay"]))
+    print("Transport allowance: " + _format_currency(info["transport"]))
+    print(f"Transfer amount: {_format_currency(info['net_pay'] + info['transport'])}")

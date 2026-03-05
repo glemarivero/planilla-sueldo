@@ -34,14 +34,30 @@ Este proyecto es una herramienta simple en Python para generar recibos de sueldo
     empleador: "NOMBRE EMPLEADOR"
     direccion: "DIRECCIÓN"
     grupo: "21"
-    # ... otros campos
+    bps: "0000000"
+    rut: "000000000000"
+    empleado: "APELLIDO, NOMBRE"
+    ci: "0000000-0"
+    fecha_ingreso: "dd/mm/aa"
+    institucion: "NOMBRE BANCO"
+    cuenta: "0000000"
+    tipo_pago: "MENSUAL"
+    lugar_pago: "MONTEVIDEO"
+    forma_pago: "Transferencia Bancaria"
+    ### Editar todos los meses a partir de acá
+    periodo: "Enero 2026"
+    fecha_pago: "5 de febrero de 2026"
     ingresos:
       "Sueldo Básico": 10000.00
-    descuentos:
-      "Fondo Social SD": 2.00
-      "Aporte jubilatorio": 100.00
-      "Seguro de enfermedad": 30.00
-      "FRL": 3.00
+      "Salario Vacacional": 3000.00
+    ingresos_no_deducibles:
+      - "Salario Vacacional"
+    descuentos: # porcentajes
+      "Fondo Social SD": 0.00
+      "Aporte jubilatorio": 15.00
+      "Seguro de enfermedad": 3.00
+      "FRL": 0.10
+    transporte: 510
     ```
 
 2.  **Generar el Recibo**:
